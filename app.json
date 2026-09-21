@@ -1,0 +1,46 @@
+{
+  "expo": {
+    "name": "Alta Performan",
+    "slug": "alta-performan",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "altaperforman",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "backgroundColor": "#0a0a0a",
+      "resizeMode": "contain"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.altaperforman.app",
+      "infoPlist": {
+        "NSAppleMusicUsageDescription": "Precisamos acessar suas músicas locais para criar playlists de treino offline.",
+        "UIBackgroundModes": ["audio", "fetch"]
+      }
+    },
+    "android": {
+      "package": "com.altaperforman.app",
+      "permissions": [
+        "android.permission.READ_MEDIA_AUDIO",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.WAKE_LOCK"
+      ],
+      "adaptiveIcon": {
+        "backgroundColor": "#0a0a0a"
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-sqlite",
+      "expo-media-library",
+      [
+        "react-native-track-player",
+        {
+          "enableSwitchingAudioOutputs": true
+        }
+      ]
+    ]
+  }
+}

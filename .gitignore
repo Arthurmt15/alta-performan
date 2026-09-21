@@ -1,0 +1,36 @@
+# deps
+node_modules/
+.expo/
+dist/
+build/
+
+# env - NUNCA commitar chave real
+.env
+.env.local
+.env.*.local
+
+# expo
+.expo-shared/
+web-build/
+
+# native
+ios/
+android/
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# editor
+.vscode/
+.idea/
+*.swp
+
+# mmkv / sqlite local
+*.db
+*.db-journal
