@@ -1,5 +1,10 @@
 const { getDefaultConfig } = require("expo/metro-config");
-const { withNativeWind } = require("nativewind/metro");
+
+let withNativeWind = (c) => c;
+try {
+  // nativewind v4 tem metro, v2 não precisa - fallback seguro
+  withNativeWind = require("nativewind/metro").withNativeWind;
+} catch {}
 
 const config = getDefaultConfig(__dirname);
 
