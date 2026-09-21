@@ -31,16 +31,6 @@
         "backgroundColor": "#0a0a0a"
       }
     },
-    "plugins": [
-      "expo-router",
-      "expo-sqlite",
-      "expo-media-library",
-      [
-        "react-native-track-player",
-        {
-          "enableSwitchingAudioOutputs": true
-        }
-      ]
-    ]
+    "plugins": ["expo-router", "expo-sqlite", "expo-media-library"]
   }
 }

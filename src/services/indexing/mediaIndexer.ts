@@ -151,10 +151,11 @@ async function scanFilesystemFallback(directories: string[]): Promise<Partial<Tr
  * Executa fora da UI thread via setTimeout chunking
  */
 async function enrichWithID3Tags(tracks: Partial<TrackMetadata>[]): Promise<TrackMetadata[]> {
-  // Lazy import para não penalizar startup
+  // Lazy import para não penalizar startup (require para compatibilidade TS)
   let jsmediatags: any = null;
   try {
-    jsmediatags = await import('jsmediatags');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    jsmediatags = require('jsmediatags');
   } catch {
     // se não disponível, retorna direto
     return tracks.map((t) => ({
