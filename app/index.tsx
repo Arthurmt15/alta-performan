@@ -1,25 +1,26 @@
-/**
- * Tela inicial - Demo do fluxo completo
- * Foco: componentes nativos leves, sem bibliotecas pesadas de UI
- */
-import React, { useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
-import { useMediaIndexer } from '@/hooks/useMediaIndexer';
-import { WORKOUT_PROFILES, WorkoutType } from '@/types/track';
-import { generateAndPlayWorkout } from '@/features/training/workoutService';
+import React, { useState } from "react";
+import { View, FlatList, ActivityIndicator, ScrollView, Image } from "react-native";
+import { useMediaIndexer } from "@/hooks/useMediaIndexer";
+import { useEnrichTracks } from "@/hooks/useEnrichTracks";
+import { WORKOUT_PROFILES, WorkoutType } from "@/types/track";
+import { generateAndPlayWorkout } from "@/features/training/workoutService";
+import { getAllTracks } from "@/core/database";
+import { Card, Button, AppText, MutedText, Badge } from "@/components/ui";
 
 export default function Home() {
   const { progress, isIndexing, count, startIndexing } = useMediaIndexer(false);
+  const { enrich, isEnriching, progress: enrichProgress } = useEnrichTracks();
   const [loadingWorkout, setLoadingWorkout] = useState<WorkoutType | null>(null);
   const [lastPlaylist, setLastPlaylist] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [enrichedCount, setEnrichedCount] = useState<number>(0);
 
   const onSelectWorkout = async (type: WorkoutType) => {
     setLoadingWorkout(type);
     setError(null);
     try {
       const res = await generateAndPlayWorkout(type);
-      setLastPlaylist(`${res.playlistName} - ${res.orderedQueue.length} faixas (${Math.round(res.totalDurationSeconds / 60)} min)`);
+      setLastPlaylist(`${res.playlistName} • ${res.orderedQueue.length} faixas • ${Math.round(res.totalDurationSeconds / 60)} min`);
     } catch (e: any) {
       setError(e.message ?? String(e));
     } finally {
@@ -27,55 +28,85 @@ export default function Home() {
     }
   };
 
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Alta Performan</Text>
-      <Text style={styles.subtitle}>Spotify Offline Smart • {count} músicas locais</Text>
+  const onEnrich = async () => {
+    const tracks = await getAllTracks();
+    if (tracks.length === 0) {
+      setError("Indexe músicas primeiro");
+      return;
+    }
+    const map = await enrich(tracks.slice(0, 30)); // limita 30 para respeitar rate-limit
+    setEnrichedCount(map.size);
+  };
 
-      <TouchableOpacity style={styles.primaryBtn} onPress={startIndexing} disabled={isIndexing}>
-        {isIndexing ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Indexar Músicas Locais</Text>}
-      </TouchableOpacity>
+  return (
+    <ScrollView className="flex-1 bg-background" contentContainerStyle={{ padding: 16, paddingTop: 48 }}>
+      {/* Header */}
+      <View className="mb-6">
+        <AppText className="text-3xl font-extrabold text-primary">Alta Performan</AppText>
+        <MutedText className="mt-1">Spotify Offline Smart • {count} músicas • {enrichedCount} enriquecidas</MutedText>
+        <View className="flex-row gap-2 mt-2">
+          <Badge>Groq LPU</Badge>
+          <Badge>MusicBrainz</Badge>
+          <Badge>TheAudioDB</Badge>
+        </View>
+      </View>
+
+      {/* Actions */}
+      <View className="gap-3 mb-4">
+        <Button onPress={startIndexing} loading={isIndexing}>
+          <AppText className="text-black font-bold">{isIndexing ? "Indexando..." : "Indexar Músicas Locais"}</AppText>
+        </Button>
+        <Button variant="secondary" onPress={onEnrich} loading={isEnriching}>
+          <AppText className="text-white font-bold">{isEnriching ? "Enriquecendo..." : "Enriquecer com MusicBrainz + AudioDB"}</AppText>
+        </Button>
+      </View>
 
       {progress && (
-        <Text style={styles.progress}>
+        <MutedText className="text-xs mb-2">
           {progress.processed}/{progress.totalFound} • Lote {progress.currentBatch} • {progress.elapsedMs}ms
-        </Text>
+        </MutedText>
       )}
+      {enrichProgress && (
+        <MutedText className="text-xs mb-2">
+          Enriquecendo {enrichProgress.done}/{enrichProgress.total}
+        </MutedText>
+      )}
+      {error && <AppText className="text-red-500 mb-2">{error}</AppText>}
+      {lastPlaylist && <AppText className="text-primary mb-2">✓ {lastPlaylist}</AppText>}
 
-      {error && <Text style={styles.error}>{error}</Text>}
-      {lastPlaylist && <Text style={styles.success}>✓ {lastPlaylist}</Text>}
+      {/* Workout Grid */}
+      <AppText className="font-bold mt-4 mb-3 text-base">Escolha o treino:</AppText>
+      <View className="gap-3 pb-8">
+        {Object.values(WORKOUT_PROFILES).map((item) => (
+          <Card key={item.type} className="active:opacity-80">
+            <View className="flex-row justify-between items-start">
+              <View className="flex-1">
+                <AppText className="font-bold text-base">{item.label}</AppText>
+                <MutedText className="mt-1">{item.description}</MutedText>
+                <View className="flex-row gap-2 mt-2">
+                  <Badge>{item.intensityCurve}</Badge>
+                  <Badge>
+                    {item.bpmRange[0]}-{item.bpmRange[1]} BPM
+                  </Badge>
+                </View>
+              </View>
+              {loadingWorkout === item.type && <ActivityIndicator color="#1DB954" />}
+            </View>
+            <Button
+              size="sm"
+              className="mt-3"
+              onPress={() => onSelectWorkout(item.type as WorkoutType)}
+              disabled={!!loadingWorkout}
+            >
+              <AppText className="text-black font-bold text-sm">Gerar Playlist IA</AppText>
+            </Button>
+          </Card>
+        ))}
+      </View>
 
-      <Text style={styles.section}>Escolha o treino:</Text>
-      <FlatList
-        data={Object.values(WORKOUT_PROFILES)}
-        keyExtractor={(item) => item.type}
-        renderItem={({ item }) => (
-          <TouchableOpacity style={styles.card} onPress={() => onSelectWorkout(item.type)} disabled={!!loadingWorkout}>
-            <Text style={styles.cardTitle}>{item.label}</Text>
-            <Text style={styles.cardDesc}>{item.description}</Text>
-            <Text style={styles.cardMeta}>
-              {item.intensityCurve} • {item.bpmRange[0]}-{item.bpmRange[1]} BPM
-            </Text>
-            {loadingWorkout === item.type && <ActivityIndicator style={{ marginTop: 8 }} />}
-          </TouchableOpacity>
-        )}
-      />
-    </View>
+      <MutedText className="text-center text-xs text-mutedDark mt-4">
+        Estilo: NativeWind (Tailwind compile-time) • APIs: MusicBrainz (sem chave) + TheAudioDB (key 123) • Cache MMKV
+      </MutedText>
+    </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0a0a0a', padding: 16, paddingTop: 48 },
-  title: { color: '#1DB954', fontSize: 28, fontWeight: '800' },
-  subtitle: { color: '#999', marginBottom: 16 },
-  primaryBtn: { backgroundColor: '#1DB954', padding: 14, borderRadius: 12, alignItems: 'center', marginBottom: 8 },
-  btnText: { color: '#000', fontWeight: '700' },
-  progress: { color: '#666', fontSize: 12, marginBottom: 8 },
-  error: { color: '#ff4444', marginBottom: 8 },
-  success: { color: '#1DB954', marginBottom: 8 },
-  section: { color: '#fff', fontWeight: '700', marginTop: 16, marginBottom: 8 },
-  card: { backgroundColor: '#1a1a1a', padding: 14, borderRadius: 12, marginBottom: 10 },
-  cardTitle: { color: '#fff', fontWeight: '700' },
-  cardDesc: { color: '#999', fontSize: 12, marginTop: 2 },
-  cardMeta: { color: '#666', fontSize: 11, marginTop: 4 },
-});

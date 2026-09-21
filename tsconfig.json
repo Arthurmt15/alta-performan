@@ -15,6 +15,6 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true
   },
-  "include": ["src", "app", "index.ts"],
+  "include": ["src", "app", "index.ts", "nativewind-env.d.ts", "global.css"],
   "exclude": ["node_modules"]
 }
