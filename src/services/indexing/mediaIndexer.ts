@@ -18,26 +18,10 @@
 
 import * as MediaLibrary from 'expo-media-library';
 import * as FileSystem from 'expo-file-system';
-import { InteractionManager } from 'react-native';
-import { upsertTracksBatch, getDatabase } from '@/core/database';
+import { upsertTracksBatch } from '@/core/database';
 import { kv, STORAGE_KEYS } from '@/core/storage/mmkv';
 import { TrackMetadata } from '@/types/track';
-
-// Gera ID estável sem crypto pesado
-function hashId(input: string): string {
-  let hash = 0;
-  for (let i = 0; i < input.length; i++) {
-    const char = input.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash |= 0;
-  }
-  return Math.abs(hash).toString(36) + '_' + input.length.toString(36);
-}
-
-const AUDIO_EXTENSIONS = new Set(['mp3', 'm4a', 'flac', 'wav', 'ogg', 'aac', 'wma']);
-const BATCH_SIZE = 50;
-const YIELD_EVERY_BATCH = true;
-const MAX_DURATION_SECONDS = 60 * 20; // ignora podcasts >20min se quiser
+import { hashId, AUDIO_EXTENSIONS, BATCH_SIZE, YIELD_EVERY_BATCH, MAX_DURATION_SECONDS, yieldToUI, waitForInteractions } from './indexerHelpers';
 
 export type IndexingProgress = {
   totalFound: number;
@@ -52,17 +36,6 @@ export type IndexingCallbacks = {
   onBatchComplete?: (batch: TrackMetadata[]) => void;
   onError?: (e: unknown) => void;
 };
-
-// Yield que libera a UI Thread - crucial para device fraco
-function yieldToUI(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, 0));
-}
-
-function waitForInteractions(): Promise<void> {
-  return new Promise((resolve) => {
-    InteractionManager.runAfterInteractions(() => resolve());
-  });
-}
 
 /**
  * Lê metadados via MediaLibrary (nativo, rápido, já indexado pelo SO)

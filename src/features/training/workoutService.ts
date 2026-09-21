@@ -1,17 +1,18 @@
 /**
- * workoutService - Orquestra: Tracks locais -> Groq -> Fila
+ * workoutService - Facade OOP (mantém compat, delega ao UseCase)
+ * Antes: funções soltas. Agora: OOP via GenerateWorkoutPlaylistUseCase
  */
-import { getAllTracks } from '@/core/database';
 import { WorkoutType } from '@/types/track';
-import { generateWorkoutPlaylist } from '@/services/groq/groqClient';
-import { createQueueFromGroqResponse, play } from '@/services/audio/playerService';
+import { GenerateWorkoutPlaylistUseCase } from '@/core/use-cases/GenerateWorkoutPlaylist';
+import { Playlist } from '@/core/domain/entities/Playlist';
 
-export async function generateAndPlayWorkout(workoutType: WorkoutType, opts?: { apiKey?: string }) {
-  const tracks = await getAllTracks();
-  if (tracks.length < 5) throw new Error(`Mínimo 5 músicas locais necessárias. Encontradas: ${tracks.length}`);
+export async function generateAndPlayWorkout(workoutType: WorkoutType, opts?: { apiKey?: string }): Promise<Playlist> {
+  const uc = new GenerateWorkoutPlaylistUseCase();
+  return uc.execute(workoutType, opts?.apiKey);
+}
 
-  const groqResponse = await generateWorkoutPlaylist(tracks, workoutType, { apiKey: opts?.apiKey });
-  await createQueueFromGroqResponse(groqResponse, tracks);
-  await play();
-  return groqResponse;
+// Compat: retorna GroqResponse cru se necessário
+export async function generateAndPlayWorkoutLegacy(workoutType: WorkoutType, opts?: { apiKey?: string }) {
+  const pl = await generateAndPlayWorkout(workoutType, opts);
+  return { playlistName: pl.name, totalDuration: pl.getTotalDuration(), tracks: pl.tracks };
 }

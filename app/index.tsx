@@ -19,8 +19,8 @@ export default function Home() {
     setLoadingWorkout(type);
     setError(null);
     try {
-      const res = await generateAndPlayWorkout(type);
-      setLastPlaylist(`${res.playlistName} • ${res.orderedQueue.length} faixas • ${Math.round(res.totalDurationSeconds / 60)} min`);
+      const pl = await generateAndPlayWorkout(type);
+      setLastPlaylist(`${pl.name} • ${pl.tracks.length} faixas • ${pl.getTotalDurationFormatted()}`);
     } catch (e: any) {
       setError(e.message ?? String(e));
     } finally {
